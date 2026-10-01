@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+		<title>Flappy Bro</title>
+		<style>
+			html, body {
+				margin: 0;
+				height: 100%;
+				overflow: hidden;
+				background: #000;
+				font-family: system-ui, -apple-system, sans-serif;
+				color: #fff;
+				user-select: none;
+				-webkit-user-select: none;
+				touch-action: none;
+			}
+
+			#hud {
+				position: fixed;
+				inset: 0;
+				pointer-events: none;
+				text-align: center;
+				text-shadow: 0 2px 8px rgba( 0, 0, 0, 0.6 );
+			}
+
+			#score {
+				margin-top: 24px;
+				font-size: 64px;
+				font-weight: 800;
+				font-variant-numeric: tabular-nums;
+			}
+
+			#best, #info {
+				font-size: 16px;
+				opacity: 0.85;
+			}
+
+			/* blood on the lens: snaps in on death, then settles */
+			#flash {
+				position: fixed;
+				inset: 0;
+				pointer-events: none;
+				opacity: 0;
+				background: radial-gradient( ellipse at center, rgba( 150, 0, 0, 0 ) 35%, rgba( 120, 0, 0, 0.85 ) 100% );
+			}
+
+			#flash.dead {
+				opacity: 0.6;
+				animation: splat 0.7s ease-out;
+			}
+
+			@keyframes splat {
+				0% { opacity: 1; background-color: rgba( 170, 0, 0, 0.55 ); }
+				100% { opacity: 0.6; background-color: rgba( 170, 0, 0, 0 ); }
+			}
+
+			#message {
+				position: absolute;
+				top: 64%;
+				left: 0;
+				right: 0;
+				padding: 0 16px;
+				font-size: 24px;
+				font-weight: 600;
+				white-space: pre-line;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="flash"></div>
+		<div id="hud">
+			<div id="score">0</div>
+			<div id="best"></div>
+			<div id="info"></div>
+			<div id="message"></div>
+		</div>
+		<script type="module" src="/src/main.js"></script>
+	</body>
+</html>
