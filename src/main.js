@@ -50,6 +50,10 @@ const bestElement = document.getElementById( 'best' );
 const infoElement = document.getElementById( 'info' );
 const messageElement = document.getElementById( 'message' );
 const flashElement = document.getElementById( 'flash' );
+const mobileControls = document.getElementById( 'mobile-controls' );
+const liftButton = document.getElementById( 'lift-btn' );
+
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test( navigator.userAgent );
 
 let renderer, scene, camera, timer, sunLight, sky, sceneEnv, pmremGenerator, renderTarget;
 let blocks, ring, beacon, blood, bird, wings;
@@ -57,6 +61,7 @@ let blocks, ring, beacon, blood, bird, wings;
 const dummy = new THREE.Object3D();
 const keys = new Set();
 const pointer = { down: false, x: 0, y: 0 };
+const touch = { forward: 0, strafe: 0, turn: 0, lift: false };
 
 const start = new THREE.Vector3( 0, 40, 0 ); // held in the air until the first input
 const velocity = new THREE.Vector3();
@@ -452,7 +457,9 @@ function reset() {
 	placeRing();
 	updateSun();
 	updateHud();
-	setMessage( 'W A S D move · arrows turn · hold space to rise, let go to fall\nreach each ring in time, dodge the blocks and the floor' );
+	setMessage( isMobile
+		? 'left stick move · right stick turn · hold rise to go up\nreach each ring in time, dodge the blocks and the floor'
+		: 'W A S D move · arrows turn · hold space to rise, let go to fall\nreach each ring in time, dodge the blocks and the floor' );
 
 }
 
@@ -474,7 +481,7 @@ function die( reason ) {
 	flashElement.classList.add( 'dead' );
 
 	updateHud();
-	setMessage( reason + '\nspace / click / tap to retry' );
+	setMessage( reason + ( isMobile ? '\ntap to retry' : '\nspace / click / tap to retry' ) );
 
 }
 
@@ -496,11 +503,21 @@ function retry() {
 
 }
 
-// drone style input in [ - 1, 1 ] for each axis, from the keyboard or from a held pointer
+// drone style input in [ - 1, 1 ] for each axis: mobile sticks, or keyboard / held pointer on desktop
 
 const _input = { forward: 0, strafe: 0, lift: false, turn: 0 };
 
 function readInput() {
+
+	if ( isMobile ) {
+
+		_input.forward = touch.forward;
+		_input.strafe = touch.strafe;
+		_input.turn = touch.turn;
+		_input.lift = touch.lift;
+		return;
+
+	}
 
 	const axis = ( positive, negative ) => ( keys.has( positive ) ? 1 : 0 ) - ( keys.has( negative ) ? 1 : 0 );
 
@@ -662,6 +679,157 @@ function init() {
 
 	if ( import.meta.env.DEV ) window.flappy = { game, bird, velocity, ring, drops, blockList, touchesBlock };
 
+	bindControls();
+
+}
+
+function bindStick( element, knob, onChange ) {
+
+	const state = { id: null, x: 0, y: 0 };
+	const maxRadius = () => element.clientWidth * 0.38;
+
+	function setKnob( x, y ) {
+
+		knob.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+
+	}
+
+	function updateFromEvent( event ) {
+
+		const rect = element.getBoundingClientRect();
+		const cx = rect.left + rect.width / 2;
+		const cy = rect.top + rect.height / 2;
+		let dx = event.clientX - cx;
+		let dy = event.clientY - cy;
+		const limit = maxRadius();
+		const length = Math.hypot( dx, dy );
+
+		if ( length > limit ) {
+
+			dx *= limit / length;
+			dy *= limit / length;
+
+		}
+
+		state.x = dx / limit;
+		state.y = dy / limit;
+		setKnob( dx, dy );
+		onChange( state.x, state.y );
+
+	}
+
+	function end() {
+
+		state.id = null;
+		state.x = 0;
+		state.y = 0;
+		setKnob( 0, 0 );
+		onChange( 0, 0 );
+
+	}
+
+	element.addEventListener( 'pointerdown', function ( event ) {
+
+		event.preventDefault();
+		event.stopPropagation();
+		element.setPointerCapture( event.pointerId );
+		state.id = event.pointerId;
+		updateFromEvent( event );
+		begin();
+
+	} );
+
+	element.addEventListener( 'pointermove', function ( event ) {
+
+		if ( state.id !== event.pointerId ) return;
+		event.preventDefault();
+		updateFromEvent( event );
+
+	} );
+
+	for ( const type of [ 'pointerup', 'pointercancel', 'lostpointercapture' ] ) {
+
+		element.addEventListener( type, function ( event ) {
+
+			if ( state.id !== null && event.pointerId !== state.id ) return;
+			end();
+
+		} );
+
+	}
+
+}
+
+function bindMobileControls() {
+
+	mobileControls.classList.add( 'active' );
+
+	bindStick( document.getElementById( 'move-stick' ), document.getElementById( 'move-knob' ), function ( x, y ) {
+
+		touch.strafe = THREE.MathUtils.clamp( x, - 1, 1 );
+		touch.forward = THREE.MathUtils.clamp( - y, - 1, 1 );
+
+	} );
+
+	bindStick( document.getElementById( 'turn-stick' ), document.getElementById( 'turn-knob' ), function ( x ) {
+
+		touch.turn = THREE.MathUtils.clamp( x, - 1, 1 );
+
+	} );
+
+	function setLift( down ) {
+
+		const wasDown = touch.lift;
+		touch.lift = down;
+		liftButton.classList.toggle( 'active', down );
+
+		if ( down && ! wasDown ) {
+
+			begin();
+			velocity.y = Math.max( velocity.y, JUMP );
+
+		}
+
+	}
+
+	liftButton.addEventListener( 'pointerdown', function ( event ) {
+
+		event.preventDefault();
+		event.stopPropagation();
+		liftButton.setPointerCapture( event.pointerId );
+		setLift( true );
+
+	} );
+
+	for ( const type of [ 'pointerup', 'pointercancel', 'lostpointercapture' ] ) {
+
+		liftButton.addEventListener( type, function () {
+
+			setLift( false );
+
+		} );
+
+	}
+
+	renderer.domElement.addEventListener( 'pointerdown', function () {
+
+		if ( game.state === 'dead' ) retry();
+		else if ( game.state === 'ready' ) begin();
+
+	} );
+
+	window.addEventListener( 'blur', function () {
+
+		touch.forward = touch.strafe = touch.turn = 0;
+		touch.lift = false;
+		liftButton.classList.remove( 'active' );
+
+	} );
+
+}
+
+function bindDesktopControls() {
+
 	const gameKeys = [ 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter' ];
 
 	window.addEventListener( 'keydown', function ( event ) {
@@ -733,6 +901,13 @@ function init() {
 		} );
 
 	}
+
+}
+
+function bindControls() {
+
+	if ( isMobile ) bindMobileControls();
+	else bindDesktopControls();
 
 	window.addEventListener( 'resize', function () {
 

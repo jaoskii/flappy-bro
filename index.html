@@ -66,6 +66,86 @@
 				font-weight: 600;
 				white-space: pre-line;
 			}
+
+			#mobile-controls {
+				display: none;
+				position: fixed;
+				inset: 0;
+				pointer-events: none;
+				z-index: 5;
+			}
+
+			#mobile-controls.active {
+				display: block;
+			}
+
+			body:has( #mobile-controls.active ) #message {
+				top: 52%;
+				font-size: 18px;
+				padding-bottom: 160px;
+			}
+
+			.stick {
+				position: absolute;
+				bottom: max(28px, env(safe-area-inset-bottom));
+				width: 120px;
+				height: 120px;
+				border-radius: 50%;
+				background: rgba( 255, 255, 255, 0.08 );
+				border: 2px solid rgba( 255, 255, 255, 0.22 );
+				pointer-events: auto;
+				touch-action: none;
+			}
+
+			.stick.left { left: max(20px, env(safe-area-inset-left)); }
+			.stick.right { right: max(20px, env(safe-area-inset-right)); }
+
+			.stick-knob {
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				width: 52px;
+				height: 52px;
+				margin: -26px 0 0 -26px;
+				border-radius: 50%;
+				background: rgba( 255, 210, 63, 0.85 );
+				box-shadow: 0 2px 10px rgba( 0, 0, 0, 0.35 );
+				pointer-events: none;
+			}
+
+			#lift-btn {
+				position: absolute;
+				bottom: calc(max(28px, env(safe-area-inset-bottom)) + 136px);
+				right: max(36px, env(safe-area-inset-right));
+				width: 88px;
+				height: 88px;
+				border: 2px solid rgba( 255, 255, 255, 0.28 );
+				border-radius: 50%;
+				background: rgba( 255, 123, 36, 0.28 );
+				color: #fff;
+				font: 700 15px/1 system-ui, -apple-system, sans-serif;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				pointer-events: auto;
+				touch-action: none;
+				-webkit-tap-highlight-color: transparent;
+			}
+
+			#lift-btn.active {
+				background: rgba( 255, 123, 36, 0.7 );
+				border-color: rgba( 255, 210, 63, 0.9 );
+			}
+
+			@media (max-height: 520px) {
+				.stick { width: 96px; height: 96px; }
+				.stick-knob { width: 42px; height: 42px; margin: -21px 0 0 -21px; }
+				#lift-btn {
+					width: 72px;
+					height: 72px;
+					bottom: calc(max(20px, env(safe-area-inset-bottom)) + 112px);
+					font-size: 13px;
+				}
+			}
 		</style>
 	</head>
 	<body>
@@ -75,6 +155,15 @@
 			<div id="best"></div>
 			<div id="info"></div>
 			<div id="message"></div>
+		</div>
+		<div id="mobile-controls">
+			<div class="stick left" id="move-stick" aria-label="Move">
+				<div class="stick-knob" id="move-knob"></div>
+			</div>
+			<button type="button" id="lift-btn" aria-label="Rise">Rise</button>
+			<div class="stick right" id="turn-stick" aria-label="Turn">
+				<div class="stick-knob" id="turn-knob"></div>
+			</div>
 		</div>
 		<script type="module" src="/src/main.js"></script>
 	</body>
